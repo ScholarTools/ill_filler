@@ -1,0 +1,6 @@
+Installing Selenium
+
+#pip install selenium
+#Needed to do conda update pip
+pip install -U selenium
+

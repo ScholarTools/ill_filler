@@ -2,17 +2,31 @@
 """
 """
 
-import requests
+#Standard Library
 from xml.etree import ElementTree
+import time
 
+#Third Party
+import requests
 from selenium import webdriver
+from selenium.common import exceptions as serrors
 
+#Local
+from . import config
+
+
+#This opens up a new browser window every time
+#??? How would we close it?
 driver = webdriver.Firefox()
 
 def fill_form(pmid=None):
     """
     """
     d = PubmedDoc(pmid)
+    
+    #TODO: switch on university
+    
+    handle_Duke(driver,d)
 
 class PubmedDoc(object):
     
@@ -54,8 +68,6 @@ class PubmedDoc(object):
             
         self.title = _get_element_text(article,'.//ArticleTitle')
         print('finishing tree')
-        import pdb
-        pdb.set_trace()
     
     def __repr__(self):
         return ('' + 
@@ -86,19 +98,58 @@ def handle_Duke(driver,doc):
     #TODO: Move to some spreadsheet
     ILL_URL = 'https://duke-illiad-oclc-org.proxy.lib.duke.edu/illiad/NDD/illiad.dll'
     
+    #Step 1 ids
+    S1_USER_NAME_ID = "j_username"
+    S1_PASSWORD_ID  = "j_password"
+    S1_SUBMIT_ID = "Submit"
+    
+    driver.get(ILL_URL)
+    
+    #0) When logging in we get a forwarding page, depending on execution speed
+    #--------------------------------------------------------------------------
+    try:
+        # <input type="submit" value="here">
+        form_submit = driver.find_element_by_xpath("//input[@value='here'][@type='submit']")
+    except serrors.NoSuchElementException:
+        pass
+    else:
+        #TODO: We probably need a try/except on this as well
+        form_submit.click()
+                      
     #1) Do we need to login?
-  
-    username = selenium.find_element_by_id("username")
-    password = selenium.find_element_by_id("password")
-
-    username.send_keys("YourUsername")
-    password.send_keys("Pa55worD")
-
-    selenium.find_element_by_name("submit").click()
-  
-    #2) Navigate to requesting a journal article (for now)
-    
-    #3) Populate the form
-    
+    try:
+        username = driver.find_element_by_id(S1_USER_NAME_ID)
+        password = driver.find_element_by_id(S1_PASSWORD_ID)
+    except serrors.NoSuchElementException:
+        #Then we are already logged in
+        pass
+    else:
+        #TODO: login
+        username.send_keys(config.user_name)
+        password.send_keys(config.password)
         
+        submit_button = driver.find_element_by_id(S1_SUBMIT_ID)
+        submit_button.click()
+        
+    
+    #2) Go to request an article
+    #--------------------------------------------------------------------------
+    try:
+        article_link = driver.find_element_by_link_text('Article')
+    except serrors.NoSuchElementException:
+        #This is an error, at this point we should be able to request an article
+        raise Exception('Unable to find the "request an article" option')
+    else:
+        article_link.click()
+
+    #3) Populate the form
+    #--------------------------------------------------------------------------
+    driver.find_element_by_id('PhotoJournalTitle').send_keys(doc.journal)
+    driver.find_element_by_id('PhotoJournalVolume').send_keys(doc.volume)             
+    driver.find_element_by_id('PhotoJournalYear').send_keys(doc.year) 
+    driver.find_element_by_id('PhotoJournalInclusivePages').send_keys(doc.pages)
+    driver.find_element_by_id('PhotoArticleAuthor').send_keys(doc.author_string)
+    driver.find_element_by_id('PhotoArticleTitle').send_keys(doc.title)
+    
+    #We'll let the user click ...    
         
