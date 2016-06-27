@@ -2,6 +2,7 @@
 """
 """
 
+#TODO: Surround with a try catch
 from . import user_config as config
 
 class Config(object):
