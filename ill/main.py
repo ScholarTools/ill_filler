@@ -90,24 +90,22 @@ def _get_element_text(parent,search_text):
         return temp.text
         
 def handle_Duke(doc):
-    #TODO: Move to some spreadsheet
+
+
+
+    """
+    Improvements
+    ------------
+    * Allow saving session and reloading
+    * Extract and return transaction #
+    * Allow addition of notes (other fields?)
+    
+    """
+
+    #TODO: This is going to move to a class ...
+    
+    
     ILL_URL = 'https://duke-illiad-oclc-org.proxy.lib.duke.edu/illiad/NDD/illiad.dll'
-    
-    #Step 1 ids
-    S1_USER_NAME_ID = "j_username"
-    S1_PASSWORD_ID  = "j_password"
-    S1_SUBMIT_ID = "Submit"
-    
-    
-    browser = RoboBrowser(history=True) 
-    
-    browser.open(ILL_URL)
-    
-    form = browser.get_form()
-    
-    import pdb
-    pdb.set_trace()
-    
     
     #1) When logging in, get the forwarding page
     #--------------------------------------------------------------------------
@@ -125,7 +123,40 @@ def handle_Duke(doc):
     form['j_password'].value = config.password
     browser.submit_form(form)
     
-    #3) Navitage to the request an article bit
+    
+    #3) Apparently we need to manually continue via presssing continue
+    form = browser.get_form()
+    browser.submit_form(form)    
+    
+    #4) Navitage to the request an article bit
+    temp = browser.find_element_by_link_text('Article')
+    browser.follow_link(temp)
+    
+    #5) Fill out the form
+    form = browser.get_form(None,{'name':'ArticleRequest'})
+    form['PhotoJournalTitle'].value = doc.journal
+    form['PhotoJournalVolume'].value = doc.volume
+    form['PhotoJournalYear'].value= doc.year
+    form['PhotoJournalInclusivePages'].value = doc.pages
+    form['PhotoArticleAuthor'].value = doc.author_string
+    form['PhotoArticleTitle'].value = doc.title
+  
+    form.select_submit_via_value_attribute('Submit Request')
+    
+    browser.submit_form(form)
+    
+    #	<div id="status"><span class="statusInformation">Article Request Received. Transaction Number 1073756</span>
+  
+    #Others:
+    #Notes
+    #
+  
+    confirm = browser.find('span',{'class':'statusInformation'})
+    #TODO: validate confirm
+    #Could extract transaction number - would facilitate allowing a download
+    #and naming file according to document info
+    #e.g. <span class="statusInformation">Article Request Received. Transaction Number 1073767</span>
+  
     
     import pdb
     pdb.set_trace()
@@ -180,12 +211,7 @@ def handle_Duke(doc):
 
     #3) Populate the form
     #--------------------------------------------------------------------------
-    driver.find_element_by_id('PhotoJournalTitle').send_keys(doc.journal)
-    driver.find_element_by_id('PhotoJournalVolume').send_keys(doc.volume)             
-    driver.find_element_by_id('PhotoJournalYear').send_keys(doc.year) 
-    driver.find_element_by_id('PhotoJournalInclusivePages').send_keys(doc.pages)
-    driver.find_element_by_id('PhotoArticleAuthor').send_keys(doc.author_string)
-    driver.find_element_by_id('PhotoArticleTitle').send_keys(doc.title)
+
     
     #We'll let the user click ...    
         
