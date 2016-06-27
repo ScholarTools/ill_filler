@@ -8,16 +8,11 @@ import time
 
 #Third Party
 import requests
-from selenium import webdriver
-from selenium.common import exceptions as serrors
+from robobrowser import RoboBrowser
 
 #Local
 from . import config
 
-
-#This opens up a new browser window every time
-#??? How would we close it?
-driver = webdriver.Firefox()
 
 def fill_form(pmid=None):
     """
@@ -26,7 +21,7 @@ def fill_form(pmid=None):
     
     #TODO: switch on university
     
-    handle_Duke(driver,d)
+    handle_Duke(d)
 
 class PubmedDoc(object):
     
@@ -94,7 +89,7 @@ def _get_element_text(parent,search_text):
     else:
         return temp.text
         
-def handle_Duke(driver,doc):
+def handle_Duke(doc):
     #TODO: Move to some spreadsheet
     ILL_URL = 'https://duke-illiad-oclc-org.proxy.lib.duke.edu/illiad/NDD/illiad.dll'
     
@@ -103,27 +98,68 @@ def handle_Duke(driver,doc):
     S1_PASSWORD_ID  = "j_password"
     S1_SUBMIT_ID = "Submit"
     
-    driver.get(ILL_URL)
     
-    #0) When logging in we get a forwarding page, depending on execution speed
+    browser = RoboBrowser(history=True) 
+    
+    browser.open(ILL_URL)
+    
+    form = browser.get_form()
+    
+    import pdb
+    pdb.set_trace()
+    
+    
+    #1) When logging in, get the forwarding page
     #--------------------------------------------------------------------------
+    browser = RoboBrowser(history=True) 
+    browser.open(ILL_URL)
+    form = browser.get_form()
+
+    #TODO: Add on check value="here"
+
+    browser.submit_form(form)    
+    
+    #2) Login now
+    form = browser.get_form()
+    form['j_username'].value = config.user_name
+    form['j_password'].value = config.password
+    browser.submit_form(form)
+    
+    #3) Navitage to the request an article bit
+    
+    import pdb
+    pdb.set_trace()
+    
+    #article_link = browser.select
+    #browser.follow_link
+    
+    
+    '''
     try:
+        print('Looking for forwarding page')
         # <input type="submit" value="here">
         form_submit = driver.find_element_by_xpath("//input[@value='here'][@type='submit']")
     except serrors.NoSuchElementException:
         pass
     else:
+        print('Clicking to go to next page')
         #TODO: We probably need a try/except on this as well
         form_submit.click()
+    '''
+    
+    time.sleep(5)
                       
     #1) Do we need to login?
     try:
+        print('finding username')
         username = driver.find_element_by_id(S1_USER_NAME_ID)
         password = driver.find_element_by_id(S1_PASSWORD_ID)
     except serrors.NoSuchElementException:
         #Then we are already logged in
+        print('Already logged in')
         pass
     else:
+        print('Logging in')
         #TODO: login
         username.send_keys(config.user_name)
         password.send_keys(config.password)
