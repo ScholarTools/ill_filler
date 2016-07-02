@@ -2,6 +2,8 @@
 """
 """
 
-from ill import main
+from ill import api
 
-main.fill_form('610035')
+api.download_papers()
+
+#main.fill_form('610035')
