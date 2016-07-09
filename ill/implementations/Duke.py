@@ -2,6 +2,9 @@
 """
 """
 
+#Stadard
+import os
+
 #Third-Party
 from robobrowser import RoboBrowser
 
@@ -88,16 +91,68 @@ class Duke_ILL(object):
         #have to wait for 15 minutes ...    
        
         links_to_filled_requests = browser.find_all('a',href=re.compile("Form=72"))
+        pdf_links = browser.find_all('a',href=re.compile("Form=75"))
          
-        #Now, let's follow these links, get the info, and then download the papers         
+        #current_url = browser.url         
          
-        import pdb
-        pdb.set_trace()
+        for info_link, pdf_link in zip(links_to_filled_requests,pdf_links):
+            browser.follow_link(info_link)
+            doc = self._parse_transaction_information()
+            browser.back()
+            
+            #TODO: Expose this as an option to the user ...
+            file_name = 'test1.pdf'
+            file_path = os.path.join(config.save_folder,file_name)
+            
+            browser.download(pdf_link,file_path)
+            
+            import pdb
+            pdb.set_trace()
+            #TODO: need to verify that download is a pdf            
+
         
 
-    def request_paper(self,doc):
-        #
-        #   
+    def _parse_transaction_information(self):
+        
+        browser = self.browser
+        
+        table_tag = browser.find('table')
+
+        td_tags = table_tag.find_all('td')
+        
+        doc = TransactionDoc()  
+        
+        def verify_and_assign(doc,tags,tag_text,name):
+            if tags[0].text == tag_text:
+                value = tags[1].text
+                if value == '\xa0':
+                    value = ''
+                setattr(doc,name,value)
+            else:
+                #TODO: Use different Exception
+                raise Exception('Expected "%s" for header but observed "%s" instead',tag_text,tags[0].text)
+
+        verify_and_assign(doc,td_tags[0:2],'Journal Title','journal_title')
+        verify_and_assign(doc,td_tags[2:4],'Volume','volume')
+        verify_and_assign(doc,td_tags[4:6],'Issue','issue')
+        verify_and_assign(doc,td_tags[6:8],'Month','month')
+        verify_and_assign(doc,td_tags[8:10],'Year','year')        
+        verify_and_assign(doc,td_tags[10:12],'Inclusive Pages','pages')
+        verify_and_assign(doc,td_tags[12:14],'Article Author','authors')
+        verify_and_assign(doc,td_tags[14:16],'Article Title','title')
+        
+        return doc
+        
+
+    def request_paper(self,doc,verbose=False):
+        """
+        Parameters
+        ----------
+        
+        Returns
+        -------
+        transaction_id : string
+        """
     
         browser = self.browser
         
@@ -129,32 +184,41 @@ class Duke_ILL(object):
         #<div id="status"><span class="statusInformation">Article Request Received. Transaction Number 1073756</span>
         confirm = browser.find('span',{'class':'statusInformation'})
         
-        import pdb
-        pdb.set_trace()
+        #TODO: Raise specific exception
+        if confirm is None:
+            raise Exception("Unable to find confirmation for request, request may have failed")
         
-        pass
-    
- 
-    
-    #4) 
+        m = re.search('\d+',confirm.text)        
+        transaction_id = m.group(0)
 
+        return transaction_id        
+  
+  
+class TransactionDoc(object):
     
+    """
+    Attributes
+    ----------
+    """
 
-  
+    def _null(self):
+        self.journal_title = None
+        self.volume = None
+        self.issue = None
+        self.month = None
+        self.year = None
+        self.pages = None
+        self.authors = None
+        self.title = None
     
     
-    
-    
-    #	
-  
-    #Others:
-    #Notes
-    #
-  
-    
-    #TODO: validate confirm
-    #Could extract transaction number - would facilitate allowing a download
-    #and naming file according to document info
-    #e.g. <span class="statusInformation">Article Request Received. Transaction Number 1073767</span>
-  
-    
+    def __repr__(self):
+        str = (u'' +
+        'journal_title: %s\n' % self.journal_title + 
+        '       volume: %s\n' % self.volume + 
+        '        issue: %s\n' % self.issue + 
+        '        month: %s\n' % self.month + 
+        '         year: %s\n' % self.year + 
+        '        pages: %s\n' % self.pages + 
+        '      authors: %s\n' % self.authors + 
+        '        title: %s\n' % self.title)

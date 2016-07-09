@@ -46,7 +46,7 @@ class API(object):
     def request_document(self,pmid):
         
         doc = ILL_DOC.from_pmid(pmid)
-        self.interface.request_paper(doc)
+        return self.interface.request_paper(doc)
         
     def __repr__(self):
         return (u'' +
