@@ -4,11 +4,9 @@
 
 #Standard Library
 from xml.etree import ElementTree
-import time
 
 #Third Party
 import requests
-from robobrowser import RoboBrowser
 
 #Local
 from . import config #..config_interface.Config
@@ -64,6 +62,7 @@ class ILL_DOC(object):
     """
     Attributes
     ----------
+    pmid: string
     journal : string
     volume : string
     year : string
@@ -81,7 +80,9 @@ class ILL_DOC(object):
         """
         
         """
-        self =  object.__new__(cls)        
+        self =  object.__new__(cls)
+        
+        self.pmid = pmid
         
         #View response in browser using:
         #http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=<PMID>&retmode=xml        
@@ -103,6 +104,10 @@ class ILL_DOC(object):
         self.journal = _get_element_text(article,'.//Title')
         self.volume = _get_element_text(article,'.//Volume')
         self.year = _get_element_text(article,'.//Year')
+        
+        
+        
+        
         
         #What other pagination is possible?
         self.pages = _get_element_text(article,'.//MedlinePgn')

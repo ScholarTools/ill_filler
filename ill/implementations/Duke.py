@@ -4,9 +4,12 @@
 
 #Stadard
 import os
+from datetime import datetime
 
 #Third-Party
+#This is actually the ScholarTools version of RoboBrowser
 from robobrowser import RoboBrowser
+import tablib
 
 import re
 
@@ -31,6 +34,7 @@ class Duke_ILL(object):
         # TODO: support reloading session 
         self.browser = RoboBrowser(history=True)
         self.browser.open(self.ILL_URL)
+        self.log = DukeILLLog()
     
     def _nav_to(self,location):
         pass
@@ -96,9 +100,17 @@ class Duke_ILL(object):
         #current_url = browser.url         
          
         for info_link, pdf_link in zip(links_to_filled_requests,pdf_links):
+            transaction_number = info_link.text
             browser.follow_link(info_link)
             doc = self._parse_transaction_information()
             browser.back()
+            
+            #TODO: Create utils for shortening strings and removing bad chars
+            #and placing underscores
+            file_name = '%s_%s_%s' % (doc.year,doc.authors,doc.title)           
+            
+            import pdb
+            pdb.set_trace()
             
             #TODO: Expose this as an option to the user ...
             file_name = 'test1.pdf'
@@ -106,10 +118,12 @@ class Duke_ILL(object):
             
             browser.download(pdf_link,file_path)
             
+            
+            
             import pdb
             pdb.set_trace()
             #TODO: need to verify that download is a pdf            
-
+            self.log.log_download('1',file_name)    
         
 
     def _parse_transaction_information(self):
@@ -178,7 +192,8 @@ class Duke_ILL(object):
         #There are multiple submit values, let's make sure we select
         #the right one
         form.select_submit_via_value_attribute('Submit Request')
-                
+        
+            
         browser.submit_form(form)        
 
         #<div id="status"><span class="statusInformation">Article Request Received. Transaction Number 1073756</span>
@@ -191,7 +206,107 @@ class Duke_ILL(object):
         m = re.search('\d+',confirm.text)        
         transaction_id = m.group(0)
 
+        self.log.log_request(transaction_id,doc)
+
         return transaction_id        
+
+class DukeILLLog(object):
+
+    """
+    Things to track:
+    1) Requested documents and their transaction #s
+    2) Downloaded files
+    
+    Table
+    1) request date
+    2) transaction #
+    3) download date
+    4) file name    
+    5) pmid
+    
+    """
+
+    def __init__(self):
+        self.log_path = os.path.join(config.save_folder,'ill_log.txt')
+        
+        if os.path.isfile(self.log_path):
+            #TODO: try [LogEntry.from_saved_string(line) for line in file]
+            with open (self.log_path,'r') as file:
+                temp = file.read().split('\n')
+                
+            data = [LogEntry.from_saved_string(x) for x in temp]
+        else:
+            data = []
+            
+        self.data = data    
+
+    def log_download(self,transaction_number,file_name):
+        
+        doc = [x for x in self.data if x.transaction_number == transaction_number]
+        
+        if len(doc):
+            matched_doc = doc[0]
+            matched_doc.download_date = self.get_current_timestring()
+            matched_doc.file_name = file_name
+        else:
+            new_log_entry = LogEntry(
+                transaction_number=transaction_number,
+                file_name=file_name,
+                download_date=self.get_current_timestring())
+            self.data.append(new_log_entry)
+        
+        self.save_to_disk()
+
+    def log_request(self,transaction_number,ILL_doc):        
+        new_log_entry = LogEntry(
+            transaction_number=transaction_number,
+            request_date=self.get_current_timestring(),
+            pmid=ILL_doc.pmid)
+
+        self.data.append(new_log_entry)                
+
+        self.save_to_disk()
+
+    def save_to_disk(self):
+        data_for_disk = '\n'.join([x.get_save_string() for x in self.data])
+
+        with open(self.log_path,'w') as file:
+            file.write(data_for_disk)
+            
+        import pdb
+        pdb.set_trace()
+
+    def get_current_timestring(self):
+        temp_dt = datetime.now()
+        return temp_dt.isoformat()
+
+
+class LogEntry(object):
+
+    def __init__(self,pmid='',request_date='',transaction_number='',file_name='',download_date=''):
+        self.download_date = download_date
+        self.file_name = file_name
+        self.pmid = pmid
+        self.request_date = request_date
+        self.transaction_number = transaction_number
+        
+    @classmethod
+    def from_saved_string(cls,string):
+        self = cls()
+        temp = string.split('\t')
+        self.download_date = temp[0]
+        self.file_name = temp[1]
+        self.pmid = temp[2]
+        self.request_date = temp[3]
+        self.transaction_number = temp[4]
+        
+        return self
+        
+    
+    def get_save_string(self):
+        temp = [self.download_date,self.file_name,self.pmid,self.request_date,self.transaction_number]
+        return '\t'.join(temp)
+    
   
   
 class TransactionDoc(object):
@@ -213,7 +328,7 @@ class TransactionDoc(object):
     
     
     def __repr__(self):
-        str = (u'' +
+        return (u'' +
         'journal_title: %s\n' % self.journal_title + 
         '       volume: %s\n' % self.volume + 
         '        issue: %s\n' % self.issue + 
