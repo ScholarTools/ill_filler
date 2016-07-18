@@ -5,11 +5,11 @@
 #Stadard
 import os
 from datetime import datetime
+import string
 
 #Third-Party
 #This is actually the ScholarTools version of RoboBrowser
 from robobrowser import RoboBrowser
-import tablib
 
 import re
 
@@ -100,30 +100,27 @@ class Duke_ILL(object):
         #current_url = browser.url         
          
         for info_link, pdf_link in zip(links_to_filled_requests,pdf_links):
-            transaction_number = info_link.text
+            transaction_id = info_link.text
             browser.follow_link(info_link)
             doc = self._parse_transaction_information()
             browser.back()
             
             #TODO: Create utils for shortening strings and removing bad chars
             #and placing underscores
-            file_name = '%s_%s_%s' % (doc.year,doc.authors,doc.title)           
             
-            import pdb
-            pdb.set_trace()
+            author_string = re.sub(r'\W+','',string.capwords(doc.authors))
+            title_string = re.sub(r'\W+','',string.capwords(doc.title))
+            if len(title_string) > 60:
+                title_string = title_string[:60]
+            file_name = '%s_%s_%s.pdf' % (doc.year,author_string,title_string)           
             
             #TODO: Expose this as an option to the user ...
-            file_name = 'test1.pdf'
             file_path = os.path.join(config.save_folder,file_name)
             
             browser.download(pdf_link,file_path)
             
-            
-            
-            import pdb
-            pdb.set_trace()
             #TODO: need to verify that download is a pdf            
-            self.log.log_download('1',file_name)    
+            self.log.log_download(transaction_id,file_name)    
         
 
     def _parse_transaction_information(self):
@@ -272,9 +269,6 @@ class DukeILLLog(object):
 
         with open(self.log_path,'w') as file:
             file.write(data_for_disk)
-            
-        import pdb
-        pdb.set_trace()
 
     def get_current_timestring(self):
         temp_dt = datetime.now()

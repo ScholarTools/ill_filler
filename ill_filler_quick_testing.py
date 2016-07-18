@@ -4,10 +4,14 @@
 
 from ill import api
 
-#tn = api.request_document('11409614')
-#print(tn)
+tn = api.request_document('8236596')
+print(tn)
 
-api.download_papers()
+#api.download_papers()
+
+#NOT YET IMPLEMENTED
+#Not downloaded
+#api.delete_online_papers(api.downloaded_paper_ids)
 
 #main.fill_form('610035')
 
